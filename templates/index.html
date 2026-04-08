@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Data Extractor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+
+    <div class="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg transition-all duration-300">
+        <div>
+            <h2 class="mt-2 text-center text-3xl font-extrabold text-gray-900">
+                工賃計算表差異チェッカー
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                指定のExcelファイルをアップロードすると、<br />開始/終了時間の差異を抽出してCSVを出力します。
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-md shadow-sm animate-pulse">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-red-800">
+                        {{ error }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <form class="mt-8 space-y-6" action="/upload" method="post" enctype="multipart/form-data">
+            <div class="rounded-md shadow-sm">
+                <label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">Excelファイルを選択 (.xlsx,
+                    .xls)</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-indigo-500 transition-colors cursor-pointer"
+                    id="drop-zone" onclick="document.getElementById('file-upload').click()">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none"
+                            viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v28a4 4 0 004 4h24a4 4 0 004-4V20L28 8z" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M28 8v12h12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600 justify-center">
+                            <label for="file-upload"
+                                class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                                <span>ファイルをアップロード</span>
+                                <input id="file-upload" name="file" type="file" accept=".xlsx, .xls, .xlsm"
+                                    class="sr-only" onchange="updateFileName(this)">
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-500" id="file-name">
+                            または、ここにドラッグ＆ドロップ
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-md">
+                    抽出してCSVをダウンロード
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function updateFileName(input) {
+            const fileNameElement = document.getElementById('file-name');
+            if (input.files && input.files.length > 0) {
+                fileNameElement.textContent = "選択中: " + input.files[0].name;
+                fileNameElement.classList.add('text-indigo-600', 'font-semibold');
+            } else {
+                fileNameElement.textContent = "または、ここにドラッグ＆ドロップ";
+                fileNameElement.classList.remove('text-indigo-600', 'font-semibold');
+            }
+        }
+
+        // Drag and drop Support
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-upload');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName(fileInput);
+            }
+        });
+    </script>
+</body>
+
+</html>
