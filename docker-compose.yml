@@ -2,10 +2,8 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: ghcr.io/milky1919/e2cwchk:latest
     container_name: excel-parser-app
     ports:
       - "18923:18923"
-    volumes:
-      - .:/app
     restart: unless-stopped
