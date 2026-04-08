@@ -42,8 +42,9 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
         # data_only=Trueで計算結果を取得し、read_onlyは使わずに標準モードを使用（セル参照互換性確保）
         # ※ defusedxml を導入済みのため、load_workbook内部でのXXEやXML爆弾は自動防御されます。
         wb = openpyxl.load_workbook(filename=file.file, data_only=True)
-    except Exception as e:
-        return templates.TemplateResponse(request=request, name="index.html", context={"error": f"ファイルの読み込みに失敗しました: {str(e)}"})
+    except Exception:
+        # 詳細なエラー文（str(e)など）はシステムの内部パスや構成情報を漏洩させるリスク(Information Disclosure)があるため伏せます
+        return templates.TemplateResponse(request=request, name="index.html", context={"error": "ファイルの読み込みに失敗しました。破損したファイル、または不正な形式でないか確認してください。"})
 
     if not wb.sheetnames:
         return templates.TemplateResponse(request=request, name="index.html", context={"error": "シートが見つかりません。"})
@@ -120,14 +121,21 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     writer = csv.writer(output)
     
     # 全シート共通: 1行目に1枚目のシートのA1
-    writer.writerow([sheet1_A1])
+    def sanitize(val):
+        """CSV Injection (Excelのマクロ・数式実行) を防ぐため、先頭の危険文字をエスケープ"""
+        s = str(val)
+        if s and s[0] in ('=', '+', '-', '@', '\t', '\r'):
+            return f"'{s}"
+        return s
+
+    writer.writerow([sanitize(sheet1_A1)])
     
     for res in sheet_results:
         # 差異があるシートのみ名前行とデータを書き込む
         if res["diffs"]:
-            writer.writerow([res["name"]])
+            writer.writerow([sanitize(res["name"])])
             for d in res["diffs"]:
-                writer.writerow([d["date"], d["type"], d["usage"], d["work"]])
+                writer.writerow([sanitize(d["date"]), sanitize(d["type"]), sanitize(d["usage"]), sanitize(d["work"])])
                 
     output.seek(0)
     # cp932 エンコーディングの指定などが必要かどうか。要件に指定はないが、Excelで開くことを考慮してutf-8(with BOM)として返すのが無難。
