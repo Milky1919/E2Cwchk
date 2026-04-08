@@ -28,10 +28,20 @@ async def read_root(request: Request):
 async def upload_file(request: Request, file: UploadFile = File(...)):
     if not file.filename.endswith(('.xlsx', '.xls', '.xlsm')):
         return templates.TemplateResponse(request=request, name="index.html", context={"error": "Excelファイル(.xlsx, .xls)をアップロードしてください。"})
+    MAX_FILE_SIZE = 5 * 1024 * 1024 # 5MB制限
     
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    
+    if file_size > MAX_FILE_SIZE:
+        return templates.TemplateResponse(request=request, name="index.html", context={"error": "ファイルサイズが5MBを超過しています（Zip爆弾等のセキュリティ対策により制限中）。"})
+        
     try:
-        contents = await file.read()
-        wb = openpyxl.load_workbook(filename=BytesIO(contents), data_only=True)
+        # file.file はFastAPIのSpooledTemporaryFile（一定以上はディスクに待避される安全仕様）
+        # data_only=Trueで計算結果を取得し、read_onlyは使わずに標準モードを使用（セル参照互換性確保）
+        # ※ defusedxml を導入済みのため、load_workbook内部でのXXEやXML爆弾は自動防御されます。
+        wb = openpyxl.load_workbook(filename=file.file, data_only=True)
     except Exception as e:
         return templates.TemplateResponse(request=request, name="index.html", context={"error": f"ファイルの読み込みに失敗しました: {str(e)}"})
 
